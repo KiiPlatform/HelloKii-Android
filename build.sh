@@ -1,1 +1,1 @@
-git archive -o HelloKii-Android.zip HEAD
+git archive --prefix=HelloKii-Android/ -o HelloKii-Android.zip HEAD
