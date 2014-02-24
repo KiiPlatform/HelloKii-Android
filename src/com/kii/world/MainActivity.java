@@ -35,6 +35,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -49,7 +51,7 @@ import com.kii.cloud.storage.callback.KiiQueryCallBack;
 import com.kii.cloud.storage.query.KiiQuery;
 import com.kii.cloud.storage.query.KiiQueryResult;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements OnItemClickListener {
 		
 	private static final String TAG = "MainActivity";
 
@@ -292,35 +294,37 @@ public class MainActivity extends Activity {
 	// the user has clicked an item on the list.
 	// we use this action to possibly delete the tapped object.
 	// to confirm, we prompt the user with a dialog:
-	public void onListItemClick(ListView l, View v, final int position, long id) {
-		
-		// build the alert
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage("Would you like to remove this item?")
-				.setCancelable(true)
-				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+@Override
+public void onItemClick(AdapterView<?> arg0, View arg1, final int arg2, long arg3) {
+    // TODO Auto-generated method stub
+    Log.v(TAG, "List item clicked");
+    // build the alert
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setMessage("Would you like to remove this item?")
+            .setCancelable(true)
+            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
 
-					// if the user chooses 'yes', 
-					public void onClick(DialogInterface dialog, int id) {
-						
-						// perform the delete action on the tapped object
-						MainActivity.this.performDelete(position);
-					}
-				})
-				.setNegativeButton("No", new DialogInterface.OnClickListener() {
-					
-					// if the user chooses 'no'
-					public void onClick(DialogInterface dialog, int id) {
-						
-						// simply dismiss the dialog
-						dialog.cancel();
-					}
-				});
-		
-		// show the dialog
-		builder.create().show();
-		
-	}
+                // if the user chooses 'yes', 
+                public void onClick(DialogInterface dialog, int id) {
+                    
+                    // perform the delete action on the tapped object
+                    MainActivity.this.performDelete(arg2);
+                }
+            })
+            .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                
+                // if the user chooses 'no'
+                public void onClick(DialogInterface dialog, int id) {
+                    
+                    // simply dismiss the dialog
+                    dialog.cancel();
+                }
+            });
+    
+    // show the dialog
+    builder.create().show();
+    
+}
 
 	
 	@Override
@@ -335,7 +339,7 @@ public class MainActivity extends Activity {
 		mListAdapter = new ObjectAdapter(this, R.layout.row, new ArrayList<KiiObject>());	
 		
 		mListView = (ListView) this.findViewById(R.id.list);
-		
+		mListView.setOnItemClickListener(this);
 		// set it to our view's list
 		mListView.setAdapter(mListAdapter);  
 	
