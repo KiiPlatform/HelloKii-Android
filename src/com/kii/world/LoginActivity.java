@@ -30,7 +30,6 @@ import android.widget.Toast;
 
 import com.kii.cloud.storage.KiiUser;
 import com.kii.cloud.storage.callback.KiiUserCallBack;
-import com.kii.cloud.storage.exception.app.AppException;
 
 public class LoginActivity extends Activity {
 
