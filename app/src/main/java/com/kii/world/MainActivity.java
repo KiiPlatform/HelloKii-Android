@@ -56,8 +56,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
     private static final String TAG = "MainActivity";
 
     // define some strings used for creating objects
-    private static final String OBJECT_KEY = "myObjectValue";
     private static final String BUCKET_NAME = "myBucket";
+    private static final String OBJECT_KEY = "myObjectValue";
 
     // define the UI elements
     private ProgressDialog mProgress;
@@ -132,18 +132,83 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
     }
 
-    // the user can add items from the options menu.
-    // create that menu here - from the res/menu/menu.xml file
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu, menu);
-        return true;
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+
+        super.onCreate(savedInstanceState);
+
+        // set our view to the xml in res/layout/main.xml
+        setContentView(R.layout.main);
+
+        // create an empty object adapter
+        mListAdapter = new ObjectAdapter(this, R.layout.row,
+                new ArrayList<KiiObject>());
+
+        mListView = (ListView) this.findViewById(R.id.list);
+        mListView.setOnItemClickListener(this);
+        // set it to our view's list
+        mListView.setAdapter(mListAdapter);
+
+        // query for any previously-created objects
+        this.loadObjects();
+
     }
 
-    public boolean onOptionsItemSelected(MenuItem item) {
-        MainActivity.this.addItem(null);
-        return true;
+    // load any existing objects associated with this user from the server.
+    // this is done on view creation
+    private void loadObjects() {
+
+        // default to an empty adapter
+        mListAdapter.clear();
+
+        // show a progress dialog to the user
+        mProgress = ProgressDialog.show(MainActivity.this, "", "Loading...",
+                true);
+
+        // create an empty KiiQuery (will retrieve all results, sorted by
+        // creation date)
+        KiiQuery query = new KiiQuery(null);
+        query.sortByDesc("_created");
+
+        // define the bucket to query
+        KiiBucket bucket = KiiUser.getCurrentUser().bucket(BUCKET_NAME);
+
+        // perform the query
+        bucket.query(new KiiQueryCallBack<KiiObject>() {
+
+            // catch the callback's "done" request
+            public void onQueryCompleted(int token,
+                                         KiiQueryResult<KiiObject> result, Exception e) {
+
+                // hide our progress UI element
+                mProgress.dismiss();
+
+                // check for an exception (successful request if e==null)
+                if (e == null) {
+
+                    // add the objects to the adapter (adding to the listview)
+                    List<KiiObject> objLists = result.getResult();
+                    for (KiiObject obj : objLists) {
+                        mListAdapter.add(obj);
+                    }
+
+                    // tell the console and the user it was a success!
+                    Log.v(TAG, "Objects loaded: " + result.getResult().toString());
+                    showToast("Objects loaded");
+
+                }
+
+                // otherwise, something bad happened in the request
+                else {
+
+                    // tell the console and the user there was a failure
+                    Log.v(TAG, "Error loading objects: " + e.getLocalizedMessage());
+                    showToast("Error loading objects: " + e.getLocalizedMessage());
+
+                }
+            }
+        }, query);
+
     }
 
     // the user has chosen to create an object from the options menu.
@@ -177,9 +242,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
                 if (e == null) {
 
                     // tell the console and the user it was a success!
-                    Toast.makeText(MainActivity.this, "Created object",
-                            Toast.LENGTH_SHORT).show();
                     Log.d(TAG, "Created object: " + o.toString());
+                    showToast("Created object");
 
                     // insert this object into the beginning of the list adapter
                     MainActivity.this.mListAdapter.insert(o, 0);
@@ -190,125 +254,14 @@ public class MainActivity extends Activity implements OnItemClickListener {
                 else {
 
                     // tell the console and the user there was a failure
-                    Toast.makeText(MainActivity.this, "Error creating object",
-                            Toast.LENGTH_SHORT).show();
-                    Log.d(TAG,
-                            "Error creating object: " + e.getLocalizedMessage());
+                    Log.d(TAG, "Error creating object: " + e.getLocalizedMessage());
+                    showToast("Error creating object" + e.getLocalizedMessage());
+
                 }
 
             }
         });
 
-    }
-
-    // load any existing objects associated with this user from the server.
-    // this is done on view creation
-    private void loadObjects() {
-
-        // default to an empty adapter
-        mListAdapter.clear();
-
-        // show a progress dialog to the user
-        mProgress = ProgressDialog.show(MainActivity.this, "", "Loading...",
-                true);
-
-        // create an empty KiiQuery (will retrieve all results, sorted by
-        // creation date)
-        KiiQuery query = new KiiQuery(null);
-        query.sortByAsc("_created");
-
-        // define the bucket to query
-        KiiBucket bucket = KiiUser.getCurrentUser().bucket(BUCKET_NAME);
-
-        // perform the query
-        bucket.query(new KiiQueryCallBack<KiiObject>() {
-
-            // catch the callback's "done" request
-            public void onQueryCompleted(int token,
-                    KiiQueryResult<KiiObject> result, Exception e) {
-
-                // hide our progress UI element
-                mProgress.dismiss();
-
-                // check for an exception (successful request if e==null)
-                if (e == null) {
-
-                    // add the objects to the adapter (adding to the listview)
-                    List<KiiObject> objLists = result.getResult();
-                    for (KiiObject obj : objLists) {
-                        mListAdapter.add(obj);
-                    }
-
-                    // tell the console and the user it was a success!
-                    Log.v(TAG, "Objects loaded: "
-                            + result.getResult().toString());
-                    Toast.makeText(MainActivity.this, "Objects loaded",
-                            Toast.LENGTH_SHORT).show();
-
-                }
-
-                // otherwise, something bad happened in the request
-                else {
-
-                    // tell the console and the user there was a failure
-                    Log.v(TAG,
-                            "Error loading objects: " + e.getLocalizedMessage());
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Error loading objects: " + e.getLocalizedMessage(),
-                            Toast.LENGTH_SHORT).show();
-                }
-            }
-        }, query);
-
-    }
-
-    // the user has chosen to delete an object
-    // perform that action here...
-    void performDelete(int position) {
-
-        // show a progress dialog to the user
-        mProgress = ProgressDialog.show(MainActivity.this, "",
-                "Deleting object...", true);
-
-        // get the object to delete based on the index of the row that was
-        // tapped
-        final KiiObject o = MainActivity.this.mListAdapter.getItem(position);
-
-        // delete the object asynchronously
-        o.delete(new KiiObjectCallBack() {
-
-            // catch the callback's "done" request
-            public void onDeleteCompleted(int token, Exception e) {
-
-                // hide our progress UI element
-                mProgress.dismiss();
-
-                // check for an exception (successful request if e==null)
-                if (e == null) {
-
-                    // tell the console and the user it was a success!
-                    Toast.makeText(MainActivity.this, "Deleted object",
-                            Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "Deleted object: " + o.toString());
-
-                    // remove the object from the list adapter
-                    MainActivity.this.mListAdapter.remove(o);
-
-                }
-
-                // otherwise, something bad happened in the request
-                else {
-
-                    // tell the console and the user there was a failure
-                    Toast.makeText(MainActivity.this, "Error deleting object",
-                            Toast.LENGTH_SHORT).show();
-                    Log.d(TAG,
-                            "Error deleting object: " + e.getLocalizedMessage());
-                }
-
-            }
-        });
     }
 
     // the user has clicked an item on the list.
@@ -316,7 +269,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     // to confirm, we prompt the user with a dialog:
     @Override
     public void onItemClick(AdapterView<?> arg0, View arg1, final int arg2,
-            long arg3) {
+                            long arg3) {
         // build the alert
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage("Would you like to remove this item?")
@@ -347,26 +300,67 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
     }
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
+    // the user has chosen to delete an object
+    // perform that action here...
+    void performDelete(int position) {
 
-        super.onCreate(savedInstanceState);
+        // show a progress dialog to the user
+        mProgress = ProgressDialog.show(MainActivity.this, "",
+                "Deleting object...", true);
 
-        // set our view to the xml in res/layout/main.xml
-        setContentView(R.layout.main);
+        // get the object to delete based on the index of the row that was
+        // tapped
+        final KiiObject o = MainActivity.this.mListAdapter.getItem(position);
 
-        // create an empty object adapter
-        mListAdapter = new ObjectAdapter(this, R.layout.row,
-                new ArrayList<KiiObject>());
+        // delete the object asynchronously
+        o.delete(new KiiObjectCallBack() {
 
-        mListView = (ListView) this.findViewById(R.id.list);
-        mListView.setOnItemClickListener(this);
-        // set it to our view's list
-        mListView.setAdapter(mListAdapter);
+            // catch the callback's "done" request
+            public void onDeleteCompleted(int token, Exception e) {
 
-        // query for any previously-created objects
-        this.loadObjects();
+                // hide our progress UI element
+                mProgress.dismiss();
 
+                // check for an exception (successful request if e==null)
+                if (e == null) {
+
+                    // tell the console and the user it was a success!
+                    Log.d(TAG, "Deleted object: " + o.toString());
+                    showToast("Deleted object");
+
+                    // remove the object from the list adapter
+                    MainActivity.this.mListAdapter.remove(o);
+
+                }
+
+                // otherwise, something bad happened in the request
+                else {
+
+                    // tell the console and the user there was a failure
+                    Log.d(TAG, "Error deleting object: " + e.getLocalizedMessage());
+                    showToast("Error deleting object: " + e.getLocalizedMessage());
+
+                }
+
+            }
+        });
     }
 
+    // the user can add items from the options menu.
+    // create that menu here - from the res/menu/menu.xml file
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        MainActivity.this.addItem(null);
+        return true;
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
 }
